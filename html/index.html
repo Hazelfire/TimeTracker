@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.arc text {
+  font: 10px sans-serif;
+  text-anchor: middle;
+}
+
+.arc path {
+  stroke: #fff;
+}
+
+</style>
+<svg width="960" height="500"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height"),
+    radius = Math.min(width, height) / 2,
+    g = svg.append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+var color = d3.scaleOrdinal(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+  
+var pie = d3.pie()
+    .sort(null)
+    .value(function(d) { return d; });
+
+function totalValuesRecursive(value){
+  if((typeof value) == 'number'){
+    return value;
+  }
+  else {
+    let sum = 0;
+    for(let child of Object.values(value)){
+      sum += totalValuesRecursive(child);
+    }
+    return sum;
+  }
+}
+
+let index_count = 0;
+const size = 50;
+
+function getWedgeDetails(key, data, starting_angle, depth, total_depth, total){
+  let wedges = [];
+  let hasChildren = typeof data != 'number';
+
+
+  let child_total = 0;
+  if(hasChildren){
+    for(let child of Object.entries(data)){
+      let child_wedges = getWedgeDetails(child[0], child[1], starting_angle + ( child_total / total * 2 * Math.PI ), depth + 1, total_depth, total);
+      wedges = wedges.concat(child_wedges.wedges);
+      child_total += child_wedges.total
+    }
+  }
+  else{
+    child_total = data;
+  }
+
+  wedges.push({
+    data: {[key]: data},
+    padAngle: 0,
+    index: index_count++,
+    value: data,
+    startAngle: starting_angle,
+    endAngle: starting_angle + (child_total / total * 2 * Math.PI),
+    innerRadius: !hasChildren ? size : (total_depth - depth) * size,
+    outerRadius: (total_depth + 1 - depth) * size
+  });
+
+  return {"total": child_total, "wedges": wedges};
+}
+
+function transPie(data){
+  let total = totalValuesRecursive(data);
+  let depth = get_depth(data);
+  console.log(depth);
+  let wedges = [];
+  let child_total = 0;
+  for(let child of Object.entries(data)){
+    let newWedges = getWedgeDetails(child[0], child[1], (child_total / total * 2 * Math.PI) , 0, depth, total);
+    wedges = wedges.concat(newWedges.wedges);
+    child_total += newWedges.total;
+  }
+  return wedges;
+}
+
+var path = d3.arc()
+
+var label = d3.arc()
+
+function get_depth(object){
+  if(typeof object == 'number')
+    return 0;
+  let max = 0;
+  for(let child of Object.values(object)){
+    max = Math.max(max, get_depth(child));
+  }
+  return max + 1;
+}
+
+let data = {"P": {"Other": 36.50000000000002, "Firefox": {"www.messenger.com": 3.666666666666665, "sso-cas.rmit.edu.au": 0.16666666666666666, "rmit.instructure.com": 60.333333333333016, "keep.google.com": 1.5, "www.google.com": 1.1666666666666665, "calendar.google.com": 0.9999999999999999, "slack.com": 0.3333333333333333, "rmitesa.slack.com": 6.166666666666669, "accounts.google.com": 0.6666666666666666, "docs.google.com": 30.833333333333414, "stackoverflow.com": 0.6666666666666666, "www.growingwiththeweb.com": 0.5, "": 4.499999999999999, "unsplash.com": 1.8333333333333335, "drive.google.com": 3.1666666666666656, "mail.google.com": 2.8333333333333326, "www.rusu.rmit.edu.au": 1.5, "n153.network-auth.com": 0.16666666666666666, "www.grlc.vic.gov.au": 0.16666666666666666, "may.hazelfire.org": 2.999999999999999, "www.un.org": 3.8333333333333317}, "URxvt": {"/home/sam/Projects/TimeTracker": 14.16666666666665, "/home/sam/Learning/WP/Assignment2": 25.00000000000004, "/home/sam/Documents/RESA": 4.499999999999999, "/home/sam": 1.6666666666666667}, "Blueman-manager": 0.16666666666666666, "Epdfview": 0.3333333333333333, "feh": 0.9999999999999999, "Chromium": 2.999999999999999, "Gimp": 3.4999999999999987, "": 0.16666666666666666, "Matplotlib": 0.6666666666666666, "Teaching": {"Tutoring": 120}}, "PC": {"Reading": {"Audible": 120, "Physical": 92}, "Bathroom": {"Shower": 11, "Teeth": 3, "Shaving": 5}, "Cleaning": {"Dishes": 55}, "Exercise": {"Weightlifting": 60, "Running": 19, "Plank": 3}, "Eating": {"Breakfast": 12, "Lunch": 14, "Dinner": 12}, "Driving": 23, "Music": 3, "Meditation": 15}, "Sleeping": 600.0};
+
+
+arc = g.selectAll(".arc")
+  .data(transPie(data))
+  .enter().append("g")
+    .attr("class", "arc");
+
+arc.append("path")
+    .attr("d", path)
+    .attr("fill", function(d) { return color(null); })
+    .on("mouseover", mouseover);
+
+/* arc.append("text")
+    .attr("transform", function(d) { return "translate(" + label.centroid(d) + ")"; })
+    .attr("dy", "0.35em")
+    .text(function(d) { return Object.keys(d.data)[0]; }); */
+
+</script>
+
